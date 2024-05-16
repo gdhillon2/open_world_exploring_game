@@ -27,6 +27,9 @@ int main() {
     return 1;
   }
 
+  // desired FPS
+  Uint32 FPS = 30;
+
   // window dimensions
   int window_height = 880;
   int window_width = 1470;
@@ -49,8 +52,11 @@ int main() {
   }
 
   // Create renderer
+  // THE COMMENTED OUT RENDERER RENDERS WITH VSYNC ENABLED
+  //  SDL_Renderer *renderer = SDL_CreateRenderer(
+  //      window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   SDL_Renderer *renderer = SDL_CreateRenderer(
-      window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+      window, -1, SDL_RENDERER_ACCELERATED);
   if (renderer == nullptr) {
     std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
     SDL_DestroyWindow(window);
@@ -125,7 +131,13 @@ int main() {
   bool quit = false;
   SDL_Event event;
 
+  Uint32 frameStart = 0;
+  int frameCount = 0;
+  float avgFPS = 0;
+  Uint32 startTime = SDL_GetTicks();
+
   while (!quit) {
+    frameStart = SDL_GetTicks();
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         quit = true;
@@ -183,6 +195,20 @@ int main() {
 
     // Present the back buffer
     SDL_RenderPresent(renderer);
+    frameCount++;
+
+    if (SDL_GetTicks() - startTime > 1000) {
+      avgFPS = frameCount / ((SDL_GetTicks() - startTime) / 1000.f);
+      printf("avg fps: %.2f\n", avgFPS);
+      frameCount = 0;
+      startTime = SDL_GetTicks();
+    }
+
+    // Delay to cap frame rate (optional)
+    Uint32 frameTime = SDL_GetTicks() - frameStart;
+    if (frameTime < 1000 / FPS) {
+      SDL_Delay((1000 / FPS) - frameTime);
+    }
   }
 
   // Clean up
@@ -198,4 +224,3 @@ int main() {
 
   return 0;
 }
-
