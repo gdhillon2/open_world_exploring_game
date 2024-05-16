@@ -1,0 +1,21 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-I/opt/homebrew/Cellar/sdl2/2.30.3/include/SDL2",
+      "-I/opt/homebrew/Cellar/sdl2_image/2.8.2_1/include/SDL2",
+      "-I/opt/homebrew/Cellar/sdl2_ttf/2.22.0/include/SDL2",
+      "-std=c++17",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-c",
+      "-o",
+      "main.o",
+      "main.cpp"
+    ],
+    "directory": "/Users/gurvirdhillon/Documents/game (sdl2)",
+    "file": "/Users/gurvirdhillon/Documents/game (sdl2)/main.cpp",
+    "output": "/Users/gurvirdhillon/Documents/game (sdl2)/main.o"
+  }
+]
