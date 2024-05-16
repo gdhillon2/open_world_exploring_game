@@ -5,6 +5,26 @@
 #include <iostream>
 #include <unistd.h>
 
+void CheckSpriteBorders(int maxHeight, int maxWidth, int *currentY,
+                        int *currentX, int spriteHeight, int spriteWidth) {
+  if (*currentX + spriteWidth > maxWidth) {
+    *currentX = maxWidth - spriteWidth;
+    std::cout << "Character exceeded right border\n";
+  }
+  if (*currentX < 0) {
+    *currentX = 0;
+    std::cout << "Character exceeded left border\n";
+  }
+  if (*currentY + spriteHeight > maxHeight) {
+    *currentY = maxHeight - spriteHeight;
+    std::cout << "Character exceeded bottom border\n";
+  }
+  if (*currentY < 0) {
+    *currentY = 0;
+    std::cout << "Character exceeded top border\n";
+  }
+}
+
 int main() {
   // Initialize SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -28,7 +48,7 @@ int main() {
   }
 
   // desired FPS
-  Uint32 FPS = 30;
+  Uint32 FPS = 60;
 
   // window dimensions
   int window_height = 880;
@@ -36,7 +56,7 @@ int main() {
 
   // movement speeds
   bool sprint_toggle = false;
-  float walk = 2.0f;
+  float walk = 1.0f;
   float sprint = 2 * walk;
 
   // Create window
@@ -55,8 +75,8 @@ int main() {
   // THE COMMENTED OUT RENDERER RENDERS WITH VSYNC ENABLED
   //  SDL_Renderer *renderer = SDL_CreateRenderer(
   //      window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-  SDL_Renderer *renderer = SDL_CreateRenderer(
-      window, -1, SDL_RENDERER_ACCELERATED);
+  SDL_Renderer *renderer =
+      SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
   if (renderer == nullptr) {
     std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
     SDL_DestroyWindow(window);
@@ -125,19 +145,25 @@ int main() {
   main_char_rect.x = window_width / 2 - main_char_rect.w / 2;
   main_char_rect.y = window_height / 2 - main_char_rect.h / 2;
 
-  // Main character movement directions
+  // determines if character will be facing right or left (whether we flip the
+  // sprite or not)
   bool left_facing = true;
 
   bool quit = false;
   SDL_Event event;
 
-  Uint32 frameStart = 0;
-  int frameCount = 0;
-  float avgFPS = 0;
+  // calculate the allotted time for each frame
+  Uint32 frameTime = 1000 / FPS;
   Uint32 startTime = SDL_GetTicks();
 
   while (!quit) {
-    frameStart = SDL_GetTicks();
+    // get the time for the initial start of the frame
+    Uint32 currentTime = SDL_GetTicks();
+
+    Uint32 elapsedTime = currentTime - startTime;
+
+    startTime = currentTime;
+
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
         quit = true;
@@ -165,21 +191,27 @@ int main() {
       quit = true;
     }
 
+    float currentSprint = sprint * elapsedTime;
+    float currentWalk = walk * elapsedTime;
+
     // Main character movement
     if (keystate[SDL_SCANCODE_W] && main_char_rect.y > 0) {
-      main_char_rect.y -= sprint_toggle ? sprint : walk;
+      main_char_rect.y -= sprint_toggle ? currentSprint : currentWalk;
     }
     if (keystate[SDL_SCANCODE_A] && main_char_rect.x > 0) {
-      main_char_rect.x -= sprint_toggle ? sprint : walk;
+      main_char_rect.x -= sprint_toggle ? currentSprint : currentWalk;
     }
     if (keystate[SDL_SCANCODE_S] &&
         main_char_rect.y < window_height - main_char_rect.h) {
-      main_char_rect.y += sprint_toggle ? sprint : walk;
+      main_char_rect.y += sprint_toggle ? currentSprint : currentWalk;
     }
     if (keystate[SDL_SCANCODE_D] &&
         main_char_rect.x < window_width - main_char_rect.w) {
-      main_char_rect.x += sprint_toggle ? sprint : walk;
+      main_char_rect.x += sprint_toggle ? currentSprint : currentWalk;
     }
+
+    CheckSpriteBorders(window_height, window_width, &main_char_rect.y,
+                       &main_char_rect.x, main_char_rect.h, main_char_rect.w);
 
     // Clear the window
     SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
@@ -195,22 +227,17 @@ int main() {
 
     // Present the back buffer
     SDL_RenderPresent(renderer);
-    frameCount++;
 
-    if (SDL_GetTicks() - startTime > 1000) {
-      avgFPS = frameCount / ((SDL_GetTicks() - startTime) / 1000.f);
-      printf("avg fps: %.2f\n", avgFPS);
-      frameCount = 0;
-      startTime = SDL_GetTicks();
+    Uint32 frameDelay = SDL_GetTicks() - currentTime;
+    // if the current frame took less time than the allotted frame time,
+    // delay the next frame until the allotted time has occured
+    if (frameDelay < frameTime) {
+      SDL_Delay(frameTime - frameDelay);
     }
 
-    // Delay to cap frame rate (optional)
-    Uint32 frameTime = SDL_GetTicks() - frameStart;
-    if (frameTime < 1000 / FPS) {
-      SDL_Delay((1000 / FPS) - frameTime);
-    }
+    // printf("x: %d\ty: %d\n", main_char_rect.x, main_char_rect.y);
+    // printf("fps: %.2f\n", 1000.f / (SDL_GetTicks() - startTime));
   }
-
   // Clean up
   SDL_DestroyTexture(main_char_texture);
   SDL_DestroyTexture(no_sprint_texture);
