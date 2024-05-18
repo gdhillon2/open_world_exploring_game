@@ -5,8 +5,8 @@ LDFLAGS = -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf
 
 # Project details
 TARGET = my_game
-SRCS = $(wildcard *.cpp lib/*.cpp)
-OBJS = $(SRCS:.cpp=.o)
+SRCS = $(wildcard *.cpp) $(wildcard lib/*.cpp)
+OBJS = $(patsubst %.cpp,bin/%.o,$(SRCS))
 
 # Default target
 all: $(TARGET)
@@ -16,12 +16,17 @@ $(TARGET): $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 # Compile source files
-%.o: %.cpp
+bin/%.o: %.cpp
+	mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+bin/%.o: lib/%.cpp
+	mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Clean up build artifacts
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -rf bin $(TARGET) *.o
 
 .PHONY: all clean
 
