@@ -3,6 +3,8 @@
 SDL_Rect main_char_rect;
 SDL_Rect src_rect;
 bool left_facing = false;
+bool moving = false;
+int player_animation_frame_length = 100;
 
 void InitializeCharacterRectangles(int window_width, int window_height) {
   // size of the rectangle on the screen
