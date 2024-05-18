@@ -117,16 +117,10 @@ int main() {
   bool quit = false;
   SDL_Event event;
 
-  // calculate the allotted time for each frame
-  Uint32 frameTime = 1000 / FPS;
   Uint32 startTime = SDL_GetTicks();
 
   // animation variables
-  int frame = 0;
-  int num_frames = 7;
-  int increasing = 1;           // tracks if frames are increasing or decreasing
-  Uint32 animation_speed = 100; // time in ms per frame
-  Uint32 last_frame_time = SDL_GetTicks();
+  Uint32 animation_frame_length = 100; // time in ms per frame
   bool moving = false;
 
   while (!quit) {
@@ -148,9 +142,9 @@ int main() {
           movement_type_texture =
               sprint_toggle ? sprint_texture : no_sprint_texture;
           if (sprint_toggle) {
-            animation_speed = 75;
+            animation_frame_length = 75;
           } else {
-            animation_speed = 100;
+            animation_frame_length = 100;
           }
         }
       } else if (event.type == SDL_KEYDOWN) {
@@ -196,27 +190,7 @@ int main() {
     CheckSpriteBorders(window_height, window_width, &main_char_rect.y,
                        &main_char_rect.x, main_char_rect.h, main_char_rect.w);
 
-    if ((currentTime - last_frame_time >= animation_speed)) {
-      if (moving) {
-        if (increasing) {
-          frame++;
-          if (frame >= num_frames - 1) {
-            frame = num_frames - 1;
-            increasing = 0;
-          }
-        } else {
-          frame--;
-          if (frame <= 0) {
-            frame = 0;
-            increasing = 1;
-          }
-        }
-      } else if (frame > 0) {
-        frame--;
-      }
-      src_rect.x = frame * src_rect.w;
-      last_frame_time = currentTime;
-    }
+    AnimateCharacter(currentTime, animation_frame_length, moving);
 
     // Clear the window
     SDL_SetRenderDrawColor(renderer, 235, 235, 223, 255);
