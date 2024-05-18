@@ -56,7 +56,7 @@ int main() {
 
   // movement speeds
   bool sprint_toggle = false;
-  float walk = 1.0f;
+  float walk = 0.2f;
   float sprint = 2 * walk;
 
   // Create window
@@ -117,7 +117,8 @@ int main() {
   SDL_FreeSurface(sprint_surface);
 
   // Load main character texture
-  SDL_Surface *main_char_surface = IMG_Load("sprites/main_char_border.png");
+  // SDL_Surface *main_char_surface = IMG_Load("sprites/main_char_border.png");
+  SDL_Surface *main_char_surface = IMG_Load("sprites/example_sprite_sheet.jpg");
   if (main_char_surface == nullptr) {
     std::cerr << "IMG_Load Error: " << IMG_GetError() << std::endl;
     SDL_DestroyTexture(no_sprint_texture);
@@ -135,9 +136,20 @@ int main() {
       SDL_CreateTextureFromSurface(renderer, main_char_surface);
   SDL_FreeSurface(main_char_surface);
 
+  // size of the rectangle on the screen
   SDL_Rect main_char_rect;
-  SDL_QueryTexture(main_char_texture, nullptr, nullptr, &main_char_rect.w,
-                   &main_char_rect.h);
+  main_char_rect.w = 148;
+  main_char_rect.h = 194;
+
+  // rectangle that defines the part of the texture that we want to draw
+  SDL_Rect src_rect;
+  src_rect.x = 0;
+  src_rect.y = 0;
+  src_rect.w = 148;
+  src_rect.h = 194;
+
+  // SDL_QueryTexture(main_char_texture, nullptr, nullptr, &main_char_rect.w,
+  //                  &main_char_rect.h);
 
   float main_char_scale = 0.3f;
   main_char_rect.w = static_cast<int>(main_char_rect.w * main_char_scale);
@@ -147,7 +159,7 @@ int main() {
 
   // determines if character will be facing right or left (whether we flip the
   // sprite or not)
-  bool left_facing = true;
+  bool left_facing = false;
 
   bool quit = false;
   SDL_Event event;
@@ -155,6 +167,14 @@ int main() {
   // calculate the allotted time for each frame
   Uint32 frameTime = 1000 / FPS;
   Uint32 startTime = SDL_GetTicks();
+
+  // animation variables
+  int frame = 0;
+  int num_frames = 7;
+  int increasing = 1;           // tracks if frames are increasing or decreasing
+  Uint32 animation_speed = 100; // time in ms per frame
+  Uint32 last_frame_time = SDL_GetTicks();
+  bool moving = false;
 
   while (!quit) {
     // get the time for the initial start of the frame
@@ -174,13 +194,18 @@ int main() {
           sprint_toggle = !sprint_toggle;
           movement_type_texture =
               sprint_toggle ? sprint_texture : no_sprint_texture;
+          if (sprint_toggle) {
+            animation_speed = 75;
+          } else {
+            animation_speed = 100;
+          }
         }
       } else if (event.type == SDL_KEYDOWN) {
         if (event.key.keysym.sym == SDLK_d) {
-          left_facing = true;
+          left_facing = false;
         }
         if (event.key.keysym.sym == SDLK_a) {
-          left_facing = false;
+          left_facing = true;
         }
       }
     }
@@ -195,30 +220,57 @@ int main() {
     float currentWalk = walk * elapsedTime;
 
     // Main character movement
+    moving = false;
     if (keystate[SDL_SCANCODE_W] && main_char_rect.y > 0) {
       main_char_rect.y -= sprint_toggle ? currentSprint : currentWalk;
+      moving = true;
     }
     if (keystate[SDL_SCANCODE_A] && main_char_rect.x > 0) {
       main_char_rect.x -= sprint_toggle ? currentSprint : currentWalk;
+      moving = true;
     }
     if (keystate[SDL_SCANCODE_S] &&
         main_char_rect.y < window_height - main_char_rect.h) {
       main_char_rect.y += sprint_toggle ? currentSprint : currentWalk;
+      moving = true;
     }
     if (keystate[SDL_SCANCODE_D] &&
         main_char_rect.x < window_width - main_char_rect.w) {
       main_char_rect.x += sprint_toggle ? currentSprint : currentWalk;
+      moving = true;
     }
 
     CheckSpriteBorders(window_height, window_width, &main_char_rect.y,
                        &main_char_rect.x, main_char_rect.h, main_char_rect.w);
+
+    if ((currentTime - last_frame_time >= animation_speed)) {
+      if (moving) {
+        if (increasing) {
+          frame++;
+          if (frame >= num_frames - 1) {
+            frame = num_frames - 1;
+            increasing = 0;
+          }
+        } else {
+          frame--;
+          if (frame <= 0) {
+            frame = 0;
+            increasing = 1;
+          }
+        }
+      } else if (frame > 0) {
+        frame--;
+      }
+      src_rect.x = frame * src_rect.w;
+      last_frame_time = currentTime;
+    }
 
     // Clear the window
     SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
     SDL_RenderClear(renderer);
 
     // Render main character
-    SDL_RenderCopyEx(renderer, main_char_texture, nullptr, &main_char_rect, 0,
+    SDL_RenderCopyEx(renderer, main_char_texture, &src_rect, &main_char_rect, 0,
                      nullptr,
                      left_facing ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
 
@@ -236,7 +288,7 @@ int main() {
     }
 
     // printf("x: %d\ty: %d\n", main_char_rect.x, main_char_rect.y);
-    // printf("fps: %.2f\n", 1000.f / (SDL_GetTicks() - startTime));
+    printf("fps: %.2f\n", 1000.f / (SDL_GetTicks() - startTime));
   }
   // Clean up
   SDL_DestroyTexture(main_char_texture);
