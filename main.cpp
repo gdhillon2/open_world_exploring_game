@@ -1,29 +1,12 @@
+#include "main.h"
+#include "lib/collision.h"
+#include "lib/player_character.h"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <filesystem>
 #include <iostream>
 #include <unistd.h>
-
-void CheckSpriteBorders(int maxHeight, int maxWidth, int *currentY,
-                        int *currentX, int spriteHeight, int spriteWidth) {
-  if (*currentX + spriteWidth > maxWidth) {
-    *currentX = maxWidth - spriteWidth;
-    std::cout << "Character exceeded right border\n";
-  }
-  if (*currentX < 0) {
-    *currentX = 0;
-    std::cout << "Character exceeded left border\n";
-  }
-  if (*currentY + spriteHeight > maxHeight) {
-    *currentY = maxHeight - spriteHeight;
-    std::cout << "Character exceeded bottom border\n";
-  }
-  if (*currentY < 0) {
-    *currentY = 0;
-    std::cout << "Character exceeded top border\n";
-  }
-}
 
 int main() {
   // Initialize SDL
@@ -46,13 +29,6 @@ int main() {
     SDL_Quit();
     return 1;
   }
-
-  // desired FPS
-  Uint32 FPS = 60;
-
-  // window dimensions
-  int window_height = 880;
-  int window_width = 1470;
 
   // movement speeds
   bool sprint_toggle = false;
@@ -87,7 +63,7 @@ int main() {
   }
 
   // Load font
-  TTF_Font *font = TTF_OpenFont("Anonymous.ttf", 24);
+  TTF_Font *font = TTF_OpenFont("fonts/Anonymous.ttf", 24);
   if (font == nullptr) {
     std::cerr << "TTF_OpenFont Error: " << TTF_GetError() << std::endl;
     SDL_DestroyRenderer(renderer);
@@ -136,30 +112,7 @@ int main() {
       SDL_CreateTextureFromSurface(renderer, main_char_surface);
   SDL_FreeSurface(main_char_surface);
 
-  // size of the rectangle on the screen
-  SDL_Rect main_char_rect;
-  main_char_rect.w = 148;
-  main_char_rect.h = 194;
-
-  // rectangle that defines the part of the texture that we want to draw
-  SDL_Rect src_rect;
-  src_rect.x = 0;
-  src_rect.y = 0;
-  src_rect.w = 148;
-  src_rect.h = 194;
-
-  // SDL_QueryTexture(main_char_texture, nullptr, nullptr, &main_char_rect.w,
-  //                  &main_char_rect.h);
-
-  float main_char_scale = 0.3f;
-  main_char_rect.w = static_cast<int>(main_char_rect.w * main_char_scale);
-  main_char_rect.h = static_cast<int>(main_char_rect.h * main_char_scale);
-  main_char_rect.x = window_width / 2 - main_char_rect.w / 2;
-  main_char_rect.y = window_height / 2 - main_char_rect.h / 2;
-
-  // determines if character will be facing right or left (whether we flip the
-  // sprite or not)
-  bool left_facing = false;
+  InitializeCharacterRectangles(window_width, window_height);
 
   bool quit = false;
   SDL_Event event;

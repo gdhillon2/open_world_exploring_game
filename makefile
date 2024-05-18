@@ -5,7 +5,7 @@ LDFLAGS = -L/opt/homebrew/lib -lSDL2 -lSDL2_image -lSDL2_ttf
 
 # Project details
 TARGET = my_game
-SRCS = main.cpp
+SRCS = $(wildcard *.cpp lib/*.cpp)
 OBJS = $(SRCS:.cpp=.o)
 
 # Default target
