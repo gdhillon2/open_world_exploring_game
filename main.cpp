@@ -99,10 +99,10 @@ int main() {
   }
 
   // sprinting/walking text
-  SDL_Color white = {255, 255, 255, 0};
+  SDL_Color black = {0, 0, 0, 0};
   SDL_Color red = {255, 0, 0, 0};
 
-  SDL_Surface *no_sprint_surface = TTF_RenderText_Solid(font, "walking", white);
+  SDL_Surface *no_sprint_surface = TTF_RenderText_Solid(font, "walking", black);
   SDL_Surface *sprint_surface = TTF_RenderText_Solid(font, "sprinting", red);
 
   SDL_Texture *no_sprint_texture =
@@ -266,7 +266,7 @@ int main() {
     }
 
     // Clear the window
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+    SDL_SetRenderDrawColor(renderer, 235, 235, 223, 255);
     SDL_RenderClear(renderer);
 
     // Render main character
