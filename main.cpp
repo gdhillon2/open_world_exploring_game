@@ -128,9 +128,7 @@ int main() {
     startTime = currentTime;
 
     while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_QUIT) {
-        quit = true;
-      } else if (event.type == SDL_KEYUP) {
+      if (event.type == SDL_KEYUP) {
         // Toggle sprint with shift
         if (event.key.keysym.sym == SDLK_LSHIFT ||
             event.key.keysym.sym == SDLK_RSHIFT) {
@@ -142,13 +140,6 @@ int main() {
           } else {
             player_animation_frame_length = 100;
           }
-        }
-      } else if (event.type == SDL_KEYDOWN) {
-        if (event.key.keysym.sym == SDLK_d) {
-          left_facing = false;
-        }
-        if (event.key.keysym.sym == SDLK_a) {
-          left_facing = true;
         }
       }
     }
@@ -164,23 +155,31 @@ int main() {
 
     // Main character movement
     moving = false;
-    if (keystate[SDL_SCANCODE_W] && main_char_rect.y > 0) {
+    bool move_up = keystate[SDL_SCANCODE_W] && main_char_rect.y > 0;
+    bool move_down = keystate[SDL_SCANCODE_S] &&
+                     main_char_rect.y < window_height - main_char_rect.h;
+    bool move_left = keystate[SDL_SCANCODE_A] && main_char_rect.x > 0;
+    bool move_right = keystate[SDL_SCANCODE_D] &&
+                      main_char_rect.x < window_width - main_char_rect.w;
+
+    // Move vertically
+    if (move_up && !move_down) {
       main_char_rect.y -= sprint_toggle ? currentSprint : currentWalk;
       moving = true;
-    }
-    if (keystate[SDL_SCANCODE_A] && main_char_rect.x > 0) {
-      main_char_rect.x -= sprint_toggle ? currentSprint : currentWalk;
-      moving = true;
-    }
-    if (keystate[SDL_SCANCODE_S] &&
-        main_char_rect.y < window_height - main_char_rect.h) {
+    } else if (move_down && !move_up) {
       main_char_rect.y += sprint_toggle ? currentSprint : currentWalk;
       moving = true;
     }
-    if (keystate[SDL_SCANCODE_D] &&
-        main_char_rect.x < window_width - main_char_rect.w) {
+
+    // Move horizontally
+    if (move_left && !move_right) {
+      main_char_rect.x -= sprint_toggle ? currentSprint : currentWalk;
+      moving = true;
+      left_facing = true;
+    } else if (move_right && !move_left) {
       main_char_rect.x += sprint_toggle ? currentSprint : currentWalk;
       moving = true;
+      left_facing = false;
     }
 
     CheckSpriteBorders(window_height, window_width, &main_char_rect.y,
