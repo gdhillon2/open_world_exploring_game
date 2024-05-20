@@ -1,5 +1,6 @@
 #include "main.h"
 #include "lib/collision.h"
+#include "lib/object_init.h"
 #include "lib/player_character.h"
 #include <SDL.h>
 #include <SDL_image.h>
@@ -72,45 +73,23 @@ int main() {
     SDL_Quit();
     return 1;
   }
-
   // sprinting/walking text
-  SDL_Color black = {0, 0, 0, 0};
-  SDL_Color red = {255, 0, 0, 0};
+  SDL_Texture *walking_text =
+      CreateFontTexture(renderer, font, "walking", black);
+  SDL_Texture *sprint_text =
+      CreateFontTexture(renderer, font, "sprinting", red);
+  printf("created font textures\n");
+  int text_width;
+  int text_height;
+  SDL_QueryTexture(sprint_text, nullptr, nullptr, &text_width, &text_height);
 
-  SDL_Surface *no_sprint_surface = TTF_RenderText_Solid(font, "walking", black);
-  SDL_Surface *sprint_surface = TTF_RenderText_Solid(font, "sprinting", red);
+  SDL_Rect text_rect = {0, 0, text_width, text_height};
+  SDL_Texture *movement_type_texture = walking_text;
 
-  SDL_Texture *no_sprint_texture =
-      SDL_CreateTextureFromSurface(renderer, no_sprint_surface);
-  SDL_Texture *sprint_texture =
-      SDL_CreateTextureFromSurface(renderer, sprint_surface);
-
-  SDL_Rect text_rect = {0, 0, no_sprint_surface->w, no_sprint_surface->h};
-  SDL_Texture *movement_type_texture = no_sprint_texture;
-
-  SDL_FreeSurface(no_sprint_surface);
-  SDL_FreeSurface(sprint_surface);
-
-  // Load main character texture
-  // SDL_Surface *main_char_surface = IMG_Load("sprites/main_char_border.png");
-  SDL_Surface *main_char_surface = IMG_Load("sprites/example_sprite_sheet.jpg");
-  if (main_char_surface == nullptr) {
-    std::cerr << "IMG_Load Error: " << IMG_GetError() << std::endl;
-    SDL_DestroyTexture(no_sprint_texture);
-    SDL_DestroyTexture(sprint_texture);
-    TTF_CloseFont(font);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    TTF_Quit();
-    IMG_Quit();
-    SDL_Quit();
-    return 1;
-  }
-
+  // creates a texture for the main character and then sets what part of the
+  // texture is displayed on the screen
   SDL_Texture *main_char_texture =
-      SDL_CreateTextureFromSurface(renderer, main_char_surface);
-  SDL_FreeSurface(main_char_surface);
-
+      CreateGraphicTexture(renderer, "sprites/example_sprite_sheet.png");
   InitializeCharacterRectangles(window_width, window_height);
 
   bool quit = false;
@@ -133,7 +112,7 @@ int main() {
             event.key.keysym.sym == SDLK_RSHIFT) {
           sprint_toggle = !sprint_toggle;
           movement_type_texture =
-              sprint_toggle ? sprint_texture : no_sprint_texture;
+              sprint_toggle ? sprint_text : walking_text;
           if (sprint_toggle) {
             player_animation_frame_length = 75;
           } else {
@@ -213,8 +192,8 @@ int main() {
   }
   // Clean up
   SDL_DestroyTexture(main_char_texture);
-  SDL_DestroyTexture(no_sprint_texture);
-  SDL_DestroyTexture(sprint_texture);
+  SDL_DestroyTexture(walking_text);
+  SDL_DestroyTexture(sprint_text);
   TTF_CloseFont(font);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);

@@ -6,16 +6,20 @@ bool left_facing = false;
 bool moving = false;
 int player_animation_frame_length = 100;
 
+// size of the rectangle shown on the screen
+int char_w = 148;
+int char_h = 194;
+
 void InitializeCharacterRectangles(int window_width, int window_height) {
   // size of the rectangle on the screen
-  main_char_rect.w = 148;
-  main_char_rect.h = 194;
+  main_char_rect.w = char_w;
+  main_char_rect.h = char_h;
 
   // rectangle that defines the part of the texture that we want to draw
   src_rect.x = 0;
   src_rect.y = 0;
-  src_rect.w = 148;
-  src_rect.h = 194;
+  src_rect.w = char_w;
+  src_rect.h = char_h;
 
   float main_char_scale = 0.4f;
   main_char_rect.w = static_cast<int>(main_char_rect.w * main_char_scale);
