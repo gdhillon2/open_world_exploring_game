@@ -1,29 +1,12 @@
+#include "main.h"
+#include "lib/collision.h"
+#include "lib/object_init.h"
+#include "lib/player_character.h"
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
-#include <filesystem>
 #include <iostream>
 #include <unistd.h>
-
-void CheckSpriteBorders(int maxHeight, int maxWidth, int *currentY,
-                        int *currentX, int spriteHeight, int spriteWidth) {
-  if (*currentX + spriteWidth > maxWidth) {
-    *currentX = maxWidth - spriteWidth;
-    std::cout << "Character exceeded right border\n";
-  }
-  if (*currentX < 0) {
-    *currentX = 0;
-    std::cout << "Character exceeded left border\n";
-  }
-  if (*currentY + spriteHeight > maxHeight) {
-    *currentY = maxHeight - spriteHeight;
-    std::cout << "Character exceeded bottom border\n";
-  }
-  if (*currentY < 0) {
-    *currentY = 0;
-    std::cout << "Character exceeded top border\n";
-  }
-}
 
 int main() {
   // Initialize SDL
@@ -46,13 +29,6 @@ int main() {
     SDL_Quit();
     return 1;
   }
-
-  // desired FPS
-  Uint32 FPS = 60;
-
-  // window dimensions
-  int window_height = 880;
-  int window_width = 1470;
 
   // movement speeds
   bool sprint_toggle = false;
@@ -87,7 +63,7 @@ int main() {
   }
 
   // Load font
-  TTF_Font *font = TTF_OpenFont("Anonymous.ttf", 24);
+  TTF_Font *font = TTF_OpenFont("fonts/Anonymous.ttf", 24);
   if (font == nullptr) {
     std::cerr << "TTF_OpenFont Error: " << TTF_GetError() << std::endl;
     SDL_DestroyRenderer(renderer);
@@ -97,84 +73,29 @@ int main() {
     SDL_Quit();
     return 1;
   }
-
   // sprinting/walking text
-  SDL_Color black = {0, 0, 0, 0};
-  SDL_Color red = {255, 0, 0, 0};
+  SDL_Texture *walking_text =
+      CreateFontTexture(renderer, font, "walking", black);
+  SDL_Texture *sprint_text =
+      CreateFontTexture(renderer, font, "sprinting", red);
+  printf("created font textures\n");
+  int text_width;
+  int text_height;
+  SDL_QueryTexture(sprint_text, nullptr, nullptr, &text_width, &text_height);
 
-  SDL_Surface *no_sprint_surface = TTF_RenderText_Solid(font, "walking", black);
-  SDL_Surface *sprint_surface = TTF_RenderText_Solid(font, "sprinting", red);
+  SDL_Rect text_rect = {0, 0, text_width, text_height};
+  SDL_Texture *movement_type_texture = walking_text;
 
-  SDL_Texture *no_sprint_texture =
-      SDL_CreateTextureFromSurface(renderer, no_sprint_surface);
-  SDL_Texture *sprint_texture =
-      SDL_CreateTextureFromSurface(renderer, sprint_surface);
-
-  SDL_Rect text_rect = {0, 0, no_sprint_surface->w, no_sprint_surface->h};
-  SDL_Texture *movement_type_texture = no_sprint_texture;
-
-  SDL_FreeSurface(no_sprint_surface);
-  SDL_FreeSurface(sprint_surface);
-
-  // Load main character texture
-  // SDL_Surface *main_char_surface = IMG_Load("sprites/main_char_border.png");
-  SDL_Surface *main_char_surface = IMG_Load("sprites/example_sprite_sheet.jpg");
-  if (main_char_surface == nullptr) {
-    std::cerr << "IMG_Load Error: " << IMG_GetError() << std::endl;
-    SDL_DestroyTexture(no_sprint_texture);
-    SDL_DestroyTexture(sprint_texture);
-    TTF_CloseFont(font);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    TTF_Quit();
-    IMG_Quit();
-    SDL_Quit();
-    return 1;
-  }
-
+  // creates a texture for the main character and then sets what part of the
+  // texture is displayed on the screen
   SDL_Texture *main_char_texture =
-      SDL_CreateTextureFromSurface(renderer, main_char_surface);
-  SDL_FreeSurface(main_char_surface);
-
-  // size of the rectangle on the screen
-  SDL_Rect main_char_rect;
-  main_char_rect.w = 148;
-  main_char_rect.h = 194;
-
-  // rectangle that defines the part of the texture that we want to draw
-  SDL_Rect src_rect;
-  src_rect.x = 0;
-  src_rect.y = 0;
-  src_rect.w = 148;
-  src_rect.h = 194;
-
-  // SDL_QueryTexture(main_char_texture, nullptr, nullptr, &main_char_rect.w,
-  //                  &main_char_rect.h);
-
-  float main_char_scale = 0.3f;
-  main_char_rect.w = static_cast<int>(main_char_rect.w * main_char_scale);
-  main_char_rect.h = static_cast<int>(main_char_rect.h * main_char_scale);
-  main_char_rect.x = window_width / 2 - main_char_rect.w / 2;
-  main_char_rect.y = window_height / 2 - main_char_rect.h / 2;
-
-  // determines if character will be facing right or left (whether we flip the
-  // sprite or not)
-  bool left_facing = false;
+      CreateGraphicTexture(renderer, "sprites/example_sprite_sheet.png");
+  InitializeCharacterRectangles(window_width, window_height);
 
   bool quit = false;
   SDL_Event event;
 
-  // calculate the allotted time for each frame
-  Uint32 frameTime = 1000 / FPS;
   Uint32 startTime = SDL_GetTicks();
-
-  // animation variables
-  int frame = 0;
-  int num_frames = 7;
-  int increasing = 1;           // tracks if frames are increasing or decreasing
-  Uint32 animation_speed = 100; // time in ms per frame
-  Uint32 last_frame_time = SDL_GetTicks();
-  bool moving = false;
 
   while (!quit) {
     // get the time for the initial start of the frame
@@ -185,27 +106,18 @@ int main() {
     startTime = currentTime;
 
     while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_QUIT) {
-        quit = true;
-      } else if (event.type == SDL_KEYUP) {
+      if (event.type == SDL_KEYUP) {
         // Toggle sprint with shift
         if (event.key.keysym.sym == SDLK_LSHIFT ||
             event.key.keysym.sym == SDLK_RSHIFT) {
           sprint_toggle = !sprint_toggle;
           movement_type_texture =
-              sprint_toggle ? sprint_texture : no_sprint_texture;
+              sprint_toggle ? sprint_text : walking_text;
           if (sprint_toggle) {
-            animation_speed = 75;
+            player_animation_frame_length = 75;
           } else {
-            animation_speed = 100;
+            player_animation_frame_length = 100;
           }
-        }
-      } else if (event.type == SDL_KEYDOWN) {
-        if (event.key.keysym.sym == SDLK_d) {
-          left_facing = false;
-        }
-        if (event.key.keysym.sym == SDLK_a) {
-          left_facing = true;
         }
       }
     }
@@ -221,49 +133,37 @@ int main() {
 
     // Main character movement
     moving = false;
-    if (keystate[SDL_SCANCODE_W] && main_char_rect.y > 0) {
+    bool move_up = keystate[SDL_SCANCODE_W] && main_char_rect.y > 0;
+    bool move_down = keystate[SDL_SCANCODE_S] &&
+                     main_char_rect.y < window_height - main_char_rect.h;
+    bool move_left = keystate[SDL_SCANCODE_A] && main_char_rect.x > 0;
+    bool move_right = keystate[SDL_SCANCODE_D] &&
+                      main_char_rect.x < window_width - main_char_rect.w;
+
+    // Move vertically
+    if (move_up && !move_down) {
       main_char_rect.y -= sprint_toggle ? currentSprint : currentWalk;
       moving = true;
-    }
-    if (keystate[SDL_SCANCODE_A] && main_char_rect.x > 0) {
-      main_char_rect.x -= sprint_toggle ? currentSprint : currentWalk;
-      moving = true;
-    }
-    if (keystate[SDL_SCANCODE_S] &&
-        main_char_rect.y < window_height - main_char_rect.h) {
+    } else if (move_down && !move_up) {
       main_char_rect.y += sprint_toggle ? currentSprint : currentWalk;
       moving = true;
     }
-    if (keystate[SDL_SCANCODE_D] &&
-        main_char_rect.x < window_width - main_char_rect.w) {
+
+    // Move horizontally
+    if (move_left && !move_right) {
+      main_char_rect.x -= sprint_toggle ? currentSprint : currentWalk;
+      moving = true;
+      left_facing = true;
+    } else if (move_right && !move_left) {
       main_char_rect.x += sprint_toggle ? currentSprint : currentWalk;
       moving = true;
+      left_facing = false;
     }
 
     CheckSpriteBorders(window_height, window_width, &main_char_rect.y,
                        &main_char_rect.x, main_char_rect.h, main_char_rect.w);
 
-    if ((currentTime - last_frame_time >= animation_speed)) {
-      if (moving) {
-        if (increasing) {
-          frame++;
-          if (frame >= num_frames - 1) {
-            frame = num_frames - 1;
-            increasing = 0;
-          }
-        } else {
-          frame--;
-          if (frame <= 0) {
-            frame = 0;
-            increasing = 1;
-          }
-        }
-      } else if (frame > 0) {
-        frame--;
-      }
-      src_rect.x = frame * src_rect.w;
-      last_frame_time = currentTime;
-    }
+    AnimateCharacter(currentTime, player_animation_frame_length, moving);
 
     // Clear the window
     SDL_SetRenderDrawColor(renderer, 235, 235, 223, 255);
@@ -292,8 +192,8 @@ int main() {
   }
   // Clean up
   SDL_DestroyTexture(main_char_texture);
-  SDL_DestroyTexture(no_sprint_texture);
-  SDL_DestroyTexture(sprint_texture);
+  SDL_DestroyTexture(walking_text);
+  SDL_DestroyTexture(sprint_text);
   TTF_CloseFont(font);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
